@@ -1,0 +1,161 @@
+ terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+}
+ 
+ # Configure the AWS Provider
+provider "aws" {
+  region = "ap-south-1"
+}
+
+#create VPC
+resource "aws_vpc" "tfvpc" {
+  cidr_block       = "10.0.0.0/16"
+  instance_tenancy = "default"
+
+  tags = {
+    Name = "MY-VPC"
+  }
+}
+
+#public subnet 
+resource "aws_subnet" "tfpubsub" {
+  vpc_id     = aws_vpc.tfvpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = {
+    Name = "TF-PUB-SUB"
+  }
+}
+
+
+#private subnet 
+resource "aws_subnet" "tfprivsub" {
+  vpc_id     = aws_vpc.tfvpc.id
+  cidr_block = "10.0.2.0/24"
+
+  tags = {
+    Name = "TF-PRI-SUB"
+  }
+}
+
+#Internet Gateway
+resource "aws_internet_gateway" "tfigw" {
+  vpc_id = aws_vpc.tfvpc.id
+
+  tags = {
+    Name = "TF-IG"
+  }
+
+#Public Rotes Tables
+resource "aws_route_table" "pubtf" {
+  vpc_id = aws_vpc.tfvpc.id
+
+  route {
+    cidr_block = "10.0.1.0/24"
+    gateway_id = aws_internet_gateway.tfigw.id
+  }
+
+  tags = {
+    Name = "TF-PUB-RT"
+  }
+}
+
+#Private Rotes Tables
+resource "aws_route_table" "pritf" {
+  vpc_id = aws_vpc.tfvpc.id
+
+  tags = {
+    Name = "TF-PRI-RT"
+  }
+}
+
+#Security-public Group
+resource "aws_security_group" "tf-Pub-security-ls" {
+  name        = "allow_tls"
+  description = "Allow TLS inbound traffic"
+  vpc_id      = aws_vpc.tfvpc.id
+
+  ingress {
+    description      = "TLS from VPC"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = [aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["10.0.1.0/24"]
+  }
+
+  tags = {
+    Name = "TF-Pub-Securitygroup-tls"
+  }
+}
+
+#Security-Private  Group
+resource "aws_security_group" "tf-Pri-security-ls" {
+  name        = "allow_tls"
+  description = "Allow TLS inbound traffic"
+  vpc_id      = aws_vpc.tfvpc.id
+
+  ingress {
+    description      = "TLS from VPC"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = [aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["10.0.2.0/24"]
+  }
+
+  tags = {
+    Name = "TF-Pri-Securitygroup-tls"
+  }
+}
+
+
+#Elastic IP
+resource "aws_eip" "tflb" {
+  instance = aws_instance.web.id
+  domain   = "vpc"
+}
+
+#Public Nat
+resource "aws_nat_gateway" "pubnat" {
+  allocation_id = aws_eip.tflb.id
+  subnet_id     = aws_subnet.tfpubsub.id
+
+  tags = {
+    Name = "PUB-GW-NAT"
+  }
+
+  # To ensure proper ordering, it is recommended to add an explicit dependency
+  # on the Internet Gateway for the VPC.
+  depends_on = [aws_internet_gateway.example]
+}
+
+
+#Private Nat 
+resource "aws_nat_gateway" "priig" {
+  connectivity_type = "private"
+  subnet_id         = aws_subnet.tfprivsub.id
+}
+
+
+
+
+
+

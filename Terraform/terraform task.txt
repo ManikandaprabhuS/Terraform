@@ -1,0 +1,46 @@
+TERRAFORM TASK
+
+TASK1 : COMPLETED THE CODE -VPC ARCH
+
+
+
+
+TASK2: TERRAFORM TAINT
+
+taint ---->a trace of a bad or undesirable substance or quality,
+			spolied,dameged in quality.
+ 
+ Used for recreating the resources once we destroyed at the time we can use terraform traint.
+ Used in two suitivations:
+ 1). terraform taint resource.id
+ 2). terraform untaint resource.id
+ 
+ TASK3:
+ 
+ CREATE A 100 EC2 INSTANCE 
+ 
+ terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+}
+ 
+ # Configure the AWS Provider
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# EC2 
+resource "aws_instance" "my-new-EC2" {
+  ami           = "ami-012b9156f755804f5"
+  instance_type = "t2.micro"
+  count=100
+
+  tags = {
+    Name = "MY-EC2 ${count.index+1}"
+  }
+}
+
